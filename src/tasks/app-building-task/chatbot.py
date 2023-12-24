@@ -5,7 +5,6 @@ import speech_recognition as sr
 from pathlib import Path
 from chatbot_functionalities.generate_questions import generate_questions
 from chatbot_functionalities.vectordb_operations import get_collection_from_vector_db
-import time
 
 # enable logging
 logging.basicConfig(level=logging.INFO)
@@ -14,126 +13,176 @@ logger = logging.getLogger("simple-chatbot")
 
 # function to initialize web app for the first time
 def initialize_app():
-    # do one time processing here
-    st.session_state.p01_show_chat_section = False
+    """Performs processing that should happen upon loading of the web app and 
+    sets all session state variables to their desired initial state.
+    """
+    # set status flags to their desired initial state 
+    st.session_state.p01_show_mock_interview = False
     st.session_state.p01_profile_details_taken = False
     st.session_state.p01_questions_generated = False
-    st.session_state.p01_chat_history = []
-    st.session_state.p01_start_recording_disabled = False
-    # set the flag that indiciates initialization is done
-    st.session_state.p01_init_complete = True
-    # Fetch chromadb object
-    st.session_state.p01_collection_object = get_collection_from_vector_db(
-        (Path.cwd() / "src" / "data" / "chromadb").__str__(), "question_collection"
+    st.session_state.p01_record_answer_disabled = False
+
+    # initialize variables related to question and interview history
+    st.session_state.p01_current_question = None
+    st.session_state.p01_current_question_index = -1
+    st.session_state.p01_questions_count = 0
+    st.session_state.p01_interview_history = []
+
+    # first question that will be asked to every candidate 
+    # this can be replaced with CV summarization component
+    st.session_state.p01_candidate_profile_question = (
+        "Please provide a brief summary about your education background and prior work experience "
+        "that may be relevant to the chosen job position."
+        )
+    
+    # instruction that will be printed before the microphone button
+    st.session_state.p01_recording_instruction = (
+        "All responses will be captured through the microphone available on your device. "
+        "Ensure that the microphone is working and configured correctly."
+        "Press the 'Record Answer' button and start speaking on the microphone after 1 second."
+        )
+    
+    # fetch the necessary collections from vector db
+    st.session_state.p01_questions_collection = get_collection_from_vector_db(
+        vdb_path=(Path.cwd() / "src" / "data" / "chromadb").__str__(), 
+        collection_name="question_collection", 
     )
+
+    # set the flag that indiciates initialization is done
+    # this flag is crucial and should be done as the very last step in this function as
+    # the web app invokes this function only when this variable is not set
+    st.session_state.p01_init_complete = True
+
+
+def load_interview_questions():
+    """Helper function to call question generation module
+    """
+    if not st.session_state.p01_questions_generated:
+        # use candidate provided profile summary and generate subsequent questions to be asked
+        st.session_state.p01_questions_df = generate_questions(
+            position=st.session_state.p01_job_position, 
+            candidate_profile=st.session_state.p01_interview_history[1]["content"], 
+            question_collection=st.session_state.p01_questions_collection, 
+        )
+
+        # set questions count
+        st.session_state.p01_questions_count = st.session_state.p01_questions_df.shape[0]
+
+        # set flag to indicate that questions have been generated
+        st.session_state.p01_questions_generated = True
 
 
 # function(s) to process user interactions
-def process_start_interview():
-    # call question generation function
+def start_mock_interview():
+    """Resets mock interview section of the app and adds the question to
+    collect candidate profile details.  
+    """
+    st.session_state.p01_show_mock_interview = True
+    # st.session_state.p01_profile_details_taken = False
+    st.session_state.p01_questions_generated = False
+    st.session_state.p01_interview_history = []
+    st.session_state.p01_record_answer_disabled = False
 
-    # store the questions in a dataframe in session state
-
-    st.session_state.p01_show_chat_section = True
-    st.session_state.p01_profile_details_taken = False
-    st.session_state.p01_chat_history = []
-
-
-def p01_process_user_query():
-    user_message = dict(role="user", content=st.session_state.p01_user_query)
-    st.session_state.p01_chat_history.append(user_message)
-
-    bot_message = dict(
-        role="assistant", content="Thank you. Please give another text input"
-    )
-    st.session_state.p01_chat_history.append(bot_message)
+    # set current question to candidate profile request question
+    st.session_state.p01_current_question = st.session_state.p01_candidate_profile_question[:]
 
 
-def record_audio():
-    # st.session_state.p01_start_recording_disabled = True
-    transcription = ""
-    r = sr.Recognizer()
-    with st.spinner("Recording in progress"):
-        with sr.Microphone() as source:
-            # with st.empty():
-            #     st.write("Start with your answer")
+def capture_candidate_response():
+    # reset error message
+    st.session_state.p01_error_message = None
 
-            audio = r.listen(source, timeout=5, phrase_time_limit=20)
-            try:
-                text = r.recognize_google(audio)
-                transcription += text + " "
+    # initialize speech recognizer component
+    recorder = sr.Recognizer()
 
-                st.session_state.p01_transcription = transcription
+    # set pause_threshold - "gap in speech" that is used to detect end of utterance
+    recorder.pause_threshold = 3
 
-                # append the utterance from the candidate to chat history
-                st.session_state.p01_chat_history.append(
-                    dict(role="user", content=transcription)
-                )
-            except sr.UnknownValueError:
-                st.error("Could not understand audio")
-            except sr.RequestError as e:
-                st.error(
-                    f"Could not request results from speech recognition service; {e}"
-                )
+    with sr.Microphone() as audio_source:
+        try:
+            # app will wait and record the audio from microphone
+            with st.spinner("Recording in progress"):
+                candidate_response_audio = \
+                    recorder.listen(
+                        audio_source, 
+                        timeout=3,
+                        )
+            
+            # convert speech to text
+            with st.spinner("Transcribing your answer"):
+                candidate_response_text = recorder.recognize_google(candidate_response_audio)
 
+            # store candidate's latest response in the session for debugging purpose
+            st.session_state.p01_last_candidate_response = candidate_response_text
 
-def get_profile_details():
-    # Ask the candidate for their profile:
-    # profile_message = dict(
-    #     role="assistant",
-    #     content="Please tell us about your previous work experience and educational details which may be relevant for the position you selected.",
-    # )
-    # st.session_state.p01_chat_history.append(profile_message)
-    with st.chat_message("assistant"):
-        st.markdown(
-            """Please tell us briefly about your previous work experience and educational details which may be relevant for the job position you selected.
-            \nAll responses will be captured through the microphone available on your device. Ensure that the microphone is working and configured correctly.
-            """
-        )
+            # if code reaches this point, then a response was successfully captured and transcribed
+            # append current question and the utterance from the candidate to interview history
+            st.session_state.p01_interview_history.append(
+                dict(role="assistant", content=st.session_state.p01_current_question)
+            )
+            st.session_state.p01_interview_history.append(
+                dict(role="user", content=candidate_response_text)
+            )
 
-    if st.button(
-        label="Start Recording Profile Details",
-        type="primary",
-        # on_click=record_audio(),
-        # disabled=st.session_state.p01_start_recording_disabled,
-        key="p01_start_recording_profile_details",
-    ):
-        record_audio()
-        st.session_state.p01_profile_details_taken = True
-        st.success("Thank you for providing your details ✅")
-        st.write(
-            f'The transcribed text is as follows: \n\n {st.session_state.p01_chat_history[0]["content"]}'
-        )
+            # generate questions if not already done
+            # this is done here instead of 'Start Mock Interview' button because we
+            # CV summarization component is not ready and we need to ask the candidate 
+            # to give a profile summary as part of first question
+            if not st.session_state.p01_questions_generated:
+                with st.spinner("Preparing questions for your mock interview"):
+                    load_interview_questions()
 
-        # while st.spinner("Generating relevant questions!"):
-        st.session_state.p01_questions_df = generate_questions(
-            st.session_state.p01_job_position,
-            st.session_state.p01_chat_history[0]["content"],
-            st.session_state.p01_collection_object,
-        )
-        st.session_state.p01_questions_generated = True
-        # time.sleep(2)
-        st.write(st.session_state.p01_questions_df)
+            # change current question to the next available question
+            # check if there are any more question(s) to be asked
+            if st.session_state.p01_current_question_index < st.session_state.p01_questions_count - 1:
+                st.session_state.p01_current_question_index += 1
+                st.session_state.p01_current_question = \
+                    st.session_state.p01_questions_df\
+                        .iloc[st.session_state.p01_current_question_index]\
+                        .question
+            # no more questions to be asked
+            else:
+                st.session_state.p01_current_question = 'Your mock interview is over'
+                st.session_state.p01_record_answer_disabled = True
+
+        except sr.WaitTimeoutError:
+            st.session_state.p01_error_message = \
+                "Please record your reponse again by clicking on 'Record Answer' button."
+        except sr.UnknownValueError:
+            st.session_state.p01_error_message = \
+                "Kindly record your reponse again by clicking on 'Record Answer' button."
+        except sr.RequestError as error:
+            st.session_state.p01_error_message = \
+                f"Oops. Something went wrong. {error}"
 
 
 # function for rendering the main web application
 def run_web_app():
-    # setup page title (this shows up as window title as well)
-    st.set_page_config(page_title="Simple Chatbot")
+    """Renders the web application, captures user actions and 
+    invokes appropriate event specific callbacks.
+    """
+
+    # page or window title - this shows up as browser window title
+    st.set_page_config(page_title="Interview Preparation Assistant")
 
     # call initialization function (only for the first time)
     if "p01_init_complete" not in st.session_state:
         initialize_app()
 
     # setup sidebar
-    st.sidebar.title("Candidate Profile")
+    # siderbar title
+    st.sidebar.markdown(
+        "<h4 style='color: orange;'>Candidate Profile</h4>",
+        unsafe_allow_html=True,
+    )
 
+    # user input field to capture name of the candidate
     candidate_name = st.sidebar.text_input(
         label="Candidate Name",
         placeholder="Enter your name",
         key="p01_candidate_name",
     )
 
+    # list of allowed values for job position
     job_position_options = [
         "Customer Service Representative",
         "Sales Manager",
@@ -141,6 +190,7 @@ def run_web_app():
         "Nurse",
         "Medical Assistance",
     ]
+    # user input field to capture job position for which candidate wants to prepare
     job_position = st.sidebar.selectbox(
         label="Job Position",
         placeholder="Select a job position",
@@ -148,42 +198,60 @@ def run_web_app():
         key="p01_job_position",
     )
 
-    start_interview_button = st.sidebar.button(
-        label="Start Interview",
-        on_click=process_start_interview,
-        key="p01_start_interview",
+    # button to start mock interview
+    st.sidebar.button(
+        label="Start Mock Interview",
+        on_click=start_mock_interview,
+        key="p01_start_mock_interview",
     )
 
-    # render chat section
-    if st.session_state.p01_show_chat_section:
+    # render mock interview section
+    if st.session_state.p01_show_mock_interview:
         # set page heading (this is a title for the main section of the app)
-        st.markdown(
-            "<h3 style='color: orange;'>Interview Prep Chatbot</h3>",
-            unsafe_allow_html=True,
-        )
+        p01_interview_section_title = f"Mock Interview for {st.session_state.p01_job_position}"
+        with st.container():
+            st.markdown(
+                f"<h4 style='color: orange;'>{p01_interview_section_title}</h4>",
+                unsafe_allow_html=True,
+            )
 
-        if st.session_state.p01_profile_details_taken == False:
-            get_profile_details()
-        else:
-            # button to start recording
-            if st.button(
-                label="Start Recording",
-                type="primary",
-                # on_click=record_audio(),
-                # disabled=st.session_state.p01_start_recording_disabled,
-                key="p01_start_recording",
-            ):
-                record_audio()
+        # current question section
+        with st.container():
+            p01_current_question_title = f"Current Question"
+            with st.container():
+                st.markdown(
+                    f"<h6 style='color: orange;'>{p01_current_question_title}</h6>",
+                    unsafe_allow_html=True,
+                )
+            with st.chat_message('assistant'):
+                st.markdown(st.session_state.p01_current_question)
 
-            # loop through chat history and show the messages if they exist
-            for message in st.session_state.p01_chat_history[::-1]:
+        # button to start recording
+        with st.container():
+            st.button(
+                label='Record Answer',
+                type='primary',  
+                on_click=capture_candidate_response, 
+                disabled=st.session_state.p01_record_answer_disabled, 
+                key='p01_record_answer', 
+            )
+
+        # error message section
+        if 'p01_error_message' in st.session_state:
+            if st.session_state.p01_error_message is not None:
+                with st.container():
+                    st.error(st.session_state.p01_error_message)
+
+        # loop through interview history and show the messages if they exist
+        p01_interview_history_title = "Interview History"
+        with st.container():
+            st.markdown(
+                f"<h6 style='color: orange;'>{p01_interview_history_title}</h6>", 
+                unsafe_allow_html=True
+                )
+            for message in st.session_state.p01_interview_history[::-1]:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
-
-            # display the captured text
-            if "p01_transcription" in st.session_state:
-                pass
-                # st.write(f"Text from STT: {st.session_state.p01_transcription}")
 
 
 # call the function to render the main web application
