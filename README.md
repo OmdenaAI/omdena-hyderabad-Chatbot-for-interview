@@ -1,9 +1,4 @@
-# chapter-project-repository-template
-Use this Repository as a template for creating Local Chapter Repositories
-
-
-# [Chapter Challenge Name]
-
+# Building a Chatbot for Interview Preparation using NLP
 
 ## Contribution Guidelines
 - Have a Look at the [project structure](#project-structure) and [folder overview](#folder-overview) below to understand where to store/upload your contribution
@@ -14,30 +9,47 @@ Use this Repository as a template for creating Local Chapter Repositories
 - Make sure your File names(jupyter notebooks, python files, data sheet file names etc) has proper naming to help others in easily identifing them.
 - Please restrict yourself from creating unnessesary folders other than in 'tasks' folder (as above mentioned naming convention) to avoid confusion. 
 
+## Setup & execution instructions
+
+1. Clone the repository onto your local machine
+
+`git clone https://github.com/OmdenaAI/omdena-hyderabad-Chatbot-for-interview.git`
+
+2. Change directory to the newly cloned directory and run the following command to set up the required virtual environment using Conda
+
+`conda env create -f environment.yml` - [Reference](https://docs.conda.io/projects/conda/en/stable/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file)
+
+3. Activate the newly created environment
+
+`conda activate omdena_hyd_chatbot`
+
+4. Rename the `.env.example` file to `.env` and populate your HuggingFace Hub API token inside it.
+
+4. Run the streamlit application
+
+`streamlit run src/tasks/app-building-task/chatbot.py`
+
 ## Project Structure
 
     ├── LICENSE
-    ├── README.md          <- The top-level README for developers/collaborators using this project.
-    ├── original           <- Original Source Code of the challenge hosted by omdena. Can be used as a reference code for the current project goal.
-    │ 
-    │
-    ├── reports            <- Folder containing the final reports/results of this project
-    │   └── README.md      <- Details about final reports and analysis
-    │ 
-    │   
-    ├── src                <- Source code folder for this project
-        │
-        ├── data           <- Datasets used and collected for this project
-        │   
-        ├── docs           <- Folder for Task documentations, Meeting Presentations and task Workflow Documents and Diagrams.
-        │
-        ├── references     <- Data dictionaries, manuals, and all other explanatory references used 
-        │
-        ├── tasks          <- Master folder for all individual task folders
-        │
-        ├── visualizations <- Code and Visualization dashboards generated for the project
-        │
-        └── results        <- Folder to store Final analysis and modelling results and code.
+    ├── README.md            <- The top-level README for developers/collaborators using this project.
+    ├── reports              <- Folder containing the final reports/results of this project
+    │   └── README.md        <- Details about final reports and analysis
+    ├── src                  <- Source code folder for this project
+    │    │
+    │    ├── data            <- Datasets used and collected for this project
+    │    │   
+    │    ├── docs            <- Folder for Task documentations, │Meeting Presentations and task Workflow Documents and Diagrams.
+    │    │
+    │    ├── references      <- Data dictionaries, manuals, and all │other explanatory references used 
+    │    │
+    │    ├── tasks           <- Master folder for all individual task │folders
+    │    │
+    │    ├── visualizations  <- Code and Visualization dashboards │generated for the project
+    │    │
+    │    └── results         <- Folder to store Final analysis and │modelling results and code.
+    ├── environment.yml      <- Conda environment file 
+    ├── .env.example         <- Template for an .env file
 --------
 
 ## Folder Overview
