@@ -36,7 +36,7 @@ def initialize_app():
         )
     
     # instruction that will be printed before the microphone button
-    st.session_state.p01_recording_instruction = (
+    st.session_state.p01_recording_instructions = (
         "All responses will be captured through the microphone available on your device. "
         "Ensure that the microphone is working and configured correctly."
         "Press the 'Record Answer' button and start speaking on the microphone after 1 second."
@@ -205,54 +205,73 @@ def run_web_app():
         key="p01_start_mock_interview",
     )
 
-    # render mock interview section
-    if st.session_state.p01_show_mock_interview:
-        # set page heading (this is a title for the main section of the app)
-        p01_interview_section_title = f"Mock Interview for {st.session_state.p01_job_position}"
-        with st.container():
-            st.markdown(
-                f"<h4 style='color: orange;'>{p01_interview_section_title}</h4>",
-                unsafe_allow_html=True,
-            )
+    # setup tabs
+    tab1, tab2, tab3 = st.tabs(['🕵️‍♂️ Q&A', '⌛ History', '📈 Results'])
 
-        # current question section
-        with st.container():
-            p01_current_question_title = f"Current Question"
+    # render mock interview section in tab 1
+    if st.session_state.p01_show_mock_interview:
+        with tab1:
+            # set page heading (this is a title for the main section of the app)
+            p01_interview_section_title = f"Mock Interview for {st.session_state.p01_job_position}"
             with st.container():
                 st.markdown(
-                    f"<h6 style='color: orange;'>{p01_current_question_title}</h6>",
+                    f"<h4 style='color: orange;'>{p01_interview_section_title}</h4>",
                     unsafe_allow_html=True,
                 )
-            with st.chat_message('assistant'):
-                st.markdown(st.session_state.p01_current_question)
 
-        # button to start recording
-        with st.container():
-            st.button(
-                label='Record Answer',
-                type='primary',  
-                on_click=capture_candidate_response, 
-                disabled=st.session_state.p01_record_answer_disabled, 
-                key='p01_record_answer', 
-            )
-
-        # error message section
-        if 'p01_error_message' in st.session_state:
-            if st.session_state.p01_error_message is not None:
+            # current question section
+            with st.container():
+                p01_current_question_title = f"Current Question"
                 with st.container():
-                    st.error(st.session_state.p01_error_message)
+                    st.markdown(
+                        f"<h6 style='color: orange;'>{p01_current_question_title}</h6>",
+                        unsafe_allow_html=True,
+                    )
+                with st.chat_message('assistant'):
+                    st.markdown(st.session_state.p01_current_question)
 
-        # loop through interview history and show the messages if they exist
-        p01_interview_history_title = "Interview History"
-        with st.container():
-            st.markdown(
-                f"<h6 style='color: orange;'>{p01_interview_history_title}</h6>", 
-                unsafe_allow_html=True
+            # button to start recording
+            with st.container():
+                st.button(
+                    label='Record Answer',
+                    type='primary',  
+                    on_click=capture_candidate_response, 
+                    disabled=st.session_state.p01_record_answer_disabled, 
+                    key='p01_record_answer', 
                 )
-            for message in st.session_state.p01_interview_history[::-1]:
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
 
+            # error message section
+            if 'p01_error_message' in st.session_state:
+                if st.session_state.p01_error_message is not None:
+                    with st.container():
+                        st.error(st.session_state.p01_error_message)
+            
+            # recording related instructions
+            with st.container():
+                st.info(st.session_state.p01_recording_instructions)
+
+        # render interview history in tab 2
+        with tab2:
+            # loop through interview history and show the messages if they exist
+            p01_interview_history_title = "Interview History"
+            with st.container():
+                st.markdown(
+                    f"<h4 style='color: orange;'>{p01_interview_history_title}</h4>", 
+                    unsafe_allow_html=True
+                    )
+                for message in st.session_state.p01_interview_history[::-1]:
+                    with st.chat_message(message["role"]):
+                        st.markdown(message["content"])
+
+        # render evaluation results and feedback in tab 3
+        with tab3:
+            # loop through evaluation results and show the results if they exist
+            p01_interview_evaluation_title = "Evaluation Results & Feedback"
+            with st.container():
+                st.markdown(
+                    f"<h4 style='color: orange;'>{p01_interview_evaluation_title}</h4>", 
+                    unsafe_allow_html=True
+                    )
 
 # call the function to render the main web application
 if __name__ == "__main__":
