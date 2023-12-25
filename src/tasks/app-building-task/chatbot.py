@@ -300,6 +300,8 @@ def run_web_app():
                     f"<h4 style='color: orange;'>{p01_interview_evaluation_title}</h4>",
                     unsafe_allow_html=True,
                 )
+                if 'p01_questions_df' in st.session_state:
+                    st.dataframe(st.session_state.p01_questions_df)
 
 
 # call the function to render the main web application
