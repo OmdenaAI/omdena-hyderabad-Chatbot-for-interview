@@ -2,6 +2,7 @@
 import logging
 import streamlit as st
 import speech_recognition as sr
+import pandas as pd
 from pathlib import Path
 from chatbot_functionalities.generate_questions import generate_questions
 from chatbot_functionalities.vectordb_operations import get_collection_from_vector_db
@@ -129,8 +130,6 @@ def capture_candidate_response():
                 dict(role="user", content=candidate_response_text)
             )
 
-            # Add answer to question's dataframe
-
             # generate questions if not already done
             # this is done here instead of 'Start Mock Interview' button because we
             # CV summarization component is not ready and we need to ask the candidate
@@ -138,6 +137,21 @@ def capture_candidate_response():
             if not st.session_state.p01_questions_generated:
                 with st.spinner("Preparing questions for your mock interview"):
                     load_interview_questions()
+            
+            # Add answer to question's dataframe
+            if st.session_state.p01_current_question_index > -1:
+                # ignoring the summary input
+                answer_row = st.session_state.p01_questions_df.iloc[st.session_state.p01_current_question_index]
+                question = answer_row['question']
+                interview_phase = answer_row['interview_phase']
+                position = answer_row['position']
+                st.session_state.p01_questions_df.iloc[st.session_state.p01_current_question_index] = [
+                    question,
+                    interview_phase,
+                    position,
+                    candidate_response_text
+                ]
+                # print(st.session_state)
 
             # change current question to the next available question
             # check if there are any more question(s) to be asked
@@ -286,6 +300,8 @@ def run_web_app():
                     f"<h4 style='color: orange;'>{p01_interview_evaluation_title}</h4>",
                     unsafe_allow_html=True,
                 )
+                if 'p01_questions_df' in st.session_state:
+                    st.dataframe(st.session_state.p01_questions_df)
 
 
 # call the function to render the main web application
