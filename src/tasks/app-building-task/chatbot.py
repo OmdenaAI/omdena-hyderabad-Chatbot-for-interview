@@ -2,6 +2,7 @@
 import logging
 import streamlit as st
 import speech_recognition as sr
+import pandas as pd
 from pathlib import Path
 from chatbot_functionalities.generate_questions import generate_questions
 from chatbot_functionalities.vectordb_operations import get_collection_from_vector_db
@@ -130,6 +131,18 @@ def capture_candidate_response():
             )
 
             # Add answer to question's dataframe
+            answer_row = st.session_state.p01_questions_df.iloc[st.session_state.p01_current_question_index]
+            question = answer_row['question']
+            interview_phase = ['interview_phase']
+            position = ['position']
+            answer_row = pd.DataFrame({st.session_state.p01_current_question_index: [
+                question,
+                interview_phase,
+                position,
+                candidate_response_text
+            ]})
+            print(answer_row)
+            st.session_state.p01_questions_df.update(answer_row)
 
             # generate questions if not already done
             # this is done here instead of 'Start Mock Interview' button because we
