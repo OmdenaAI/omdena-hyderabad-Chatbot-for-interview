@@ -130,20 +130,6 @@ def capture_candidate_response():
                 dict(role="user", content=candidate_response_text)
             )
 
-            # Add answer to question's dataframe
-            answer_row = st.session_state.p01_questions_df.iloc[st.session_state.p01_current_question_index]
-            question = answer_row['question']
-            interview_phase = ['interview_phase']
-            position = ['position']
-            answer_row = pd.DataFrame({st.session_state.p01_current_question_index: [
-                question,
-                interview_phase,
-                position,
-                candidate_response_text
-            ]})
-            print(answer_row)
-            st.session_state.p01_questions_df.update(answer_row)
-
             # generate questions if not already done
             # this is done here instead of 'Start Mock Interview' button because we
             # CV summarization component is not ready and we need to ask the candidate
@@ -151,6 +137,21 @@ def capture_candidate_response():
             if not st.session_state.p01_questions_generated:
                 with st.spinner("Preparing questions for your mock interview"):
                     load_interview_questions()
+            
+            # Add answer to question's dataframe
+            if st.session_state.p01_current_question_index > -1:
+                # ignoring the summary input
+                answer_row = st.session_state.p01_questions_df.iloc[st.session_state.p01_current_question_index]
+                question = answer_row['question']
+                interview_phase = answer_row['interview_phase']
+                position = answer_row['position']
+                st.session_state.p01_questions_df.iloc[st.session_state.p01_current_question_index] = [
+                    question,
+                    interview_phase,
+                    position,
+                    candidate_response_text
+                ]
+                # print(st.session_state)
 
             # change current question to the next available question
             # check if there are any more question(s) to be asked
