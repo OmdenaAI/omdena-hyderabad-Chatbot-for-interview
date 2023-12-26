@@ -2,10 +2,10 @@
 import logging
 import streamlit as st
 import speech_recognition as sr
-import pandas as pd
 from pathlib import Path
 from chatbot_functionalities.generate_questions import generate_questions
 from chatbot_functionalities.vectordb_operations import get_collection_from_vector_db
+from chatbot_functionalities.evaluate_answers import get_ratings_for_answers, get_feedback_for_answers, get_overall_feedback
 
 # enable logging
 logging.basicConfig(level=logging.INFO)
@@ -73,6 +73,7 @@ def load_interview_questions():
 
         # set flag to indicate that questions have been generated
         st.session_state.p01_questions_generated = True
+        st.session_state.p01_mock_interview_concluded = False
 
 
 # function(s) to process user interactions
@@ -86,6 +87,7 @@ def start_mock_interview():
     st.session_state.p01_interview_history = []
     st.session_state.p01_record_answer_disabled = False
     st.session_state.p01_start_mock_interview_disabled = True
+    st.session_state.overall_feedback = None
 
     # set current question to candidate profile request question
     st.session_state.p01_current_question = (
@@ -141,17 +143,7 @@ def capture_candidate_response():
             # Add answer to question's dataframe
             if st.session_state.p01_current_question_index > -1:
                 # ignoring the summary input
-                answer_row = st.session_state.p01_questions_df.iloc[st.session_state.p01_current_question_index]
-                question = answer_row['question']
-                interview_phase = answer_row['interview_phase']
-                position = answer_row['position']
-                st.session_state.p01_questions_df.iloc[st.session_state.p01_current_question_index] = [
-                    question,
-                    interview_phase,
-                    position,
-                    candidate_response_text
-                ]
-                # print(st.session_state)
+                st.session_state.p01_questions_df.loc[st.session_state.p01_current_question_index, 'answer'] = candidate_response_text
 
             # change current question to the next available question
             # check if there are any more question(s) to be asked
@@ -170,6 +162,7 @@ def capture_candidate_response():
                 st.session_state.p01_current_question = "Your mock interview is over"
                 st.session_state.p01_record_answer_disabled = True
                 st.session_state.p01_start_mock_interview_disabled = False
+                st.session_state.p01_mock_interview_concluded = True
 
         except sr.WaitTimeoutError:
             st.session_state.p01_error_message = "Please record your reponse again by clicking on 'Record Answer' button."
@@ -178,6 +171,10 @@ def capture_candidate_response():
         except sr.RequestError as error:
             st.session_state.p01_error_message = f"Oops. Something went wrong. {error}"
 
+def get_feedback():
+    get_ratings_for_answers(st.session_state.p01_questions_df)
+    get_feedback_for_answers(st.session_state.p01_questions_df)
+    st.session_state.overall_feedback = get_overall_feedback()
 
 # function for rendering the main web application
 def run_web_app():
@@ -231,7 +228,8 @@ def run_web_app():
     )
 
     # setup tabs
-    tab1, tab2, tab3 = st.tabs(["Q&A", "History", "Results"])
+    combined_tabs = st.tabs(["Q&A", "History", "Results"])
+    tab1, tab2, tab3 = combined_tabs
 
     # render mock interview section in tab 1
     if st.session_state.p01_show_mock_interview:
@@ -300,8 +298,27 @@ def run_web_app():
                     f"<h4 style='color: orange;'>{p01_interview_evaluation_title}</h4>",
                     unsafe_allow_html=True,
                 )
-                if 'p01_questions_df' in st.session_state:
-                    st.dataframe(st.session_state.p01_questions_df)
+                
+                if 'p01_mock_interview_concluded' in st.session_state and st.session_state.p01_mock_interview_concluded is True:
+                    st.button(
+                        label="Get Feedback",
+                        type="primary",
+                        on_click=get_feedback,
+                        key="p01_get_feedback"
+                    )
+                    
+                    if 'overall_feedback' in st.session_state and st.session_state.overall_feedback is not None:
+                        if 'p01_questions_df' in st.session_state:
+                            with st.container():
+                                st.dataframe(st.session_state.p01_questions_df)
+                                
+                            with st.container():
+                                st.markdown(
+                                    f"<h6 style='color: orange;'>Overall Feedback</h6>",
+                                    unsafe_allow_html=True,
+                                )
+                            with st.chat_message("assistant"):
+                                st.markdown(st.session_state.overall_feedback)
 
 
 # call the function to render the main web application
