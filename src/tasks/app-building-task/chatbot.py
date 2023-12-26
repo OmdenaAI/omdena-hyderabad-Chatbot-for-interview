@@ -6,7 +6,7 @@ import pandas as pd
 from pathlib import Path
 from chatbot_functionalities.generate_questions import generate_questions
 from chatbot_functionalities.vectordb_operations import get_collection_from_vector_db
-from chatbot_functionalities.llms import get_ratings_for_answers, get_feedback_for_answers
+from chatbot_functionalities.llms import get_ratings_for_answers, get_feedback_for_answers, get_overall_feedback
 
 # enable logging
 logging.basicConfig(level=logging.INFO)
@@ -306,9 +306,17 @@ def run_web_app():
                 if st.session_state.p01_start_mock_interview_disabled is False:
                     get_ratings_for_answers(st.session_state.p01_questions_df)
                     get_feedback_for_answers(st.session_state.p01_questions_df)
-                
+                    overall_feedback = get_overall_feedback()
+                    
                 if 'p01_questions_df' in st.session_state:
                     st.dataframe(st.session_state.p01_questions_df)
+                    
+                if overall_feedback is not None:
+                    with st.container():
+                        st.markdown(
+                            f"<h6 style='color: orange;'>{overall_feedback}</h6>",
+                            unsafe_allow_html=True,
+                        )
 
 
 # call the function to render the main web application

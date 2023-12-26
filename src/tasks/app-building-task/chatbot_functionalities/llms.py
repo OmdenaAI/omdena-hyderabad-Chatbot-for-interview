@@ -89,3 +89,6 @@ def get_ratings_for_answers(df: pd.DataFrame):
 
 def get_feedback_for_answers(df: pd.DataFrame):
     df.loc[:, 'feedback'] = 'Some Random Feedback'
+
+def get_overall_feedback():
+    return 'Some Overall Feedback'
