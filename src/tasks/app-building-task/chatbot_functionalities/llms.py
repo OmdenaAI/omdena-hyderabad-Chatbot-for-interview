@@ -3,9 +3,7 @@ from langchain.llms import HuggingFaceHub, OpenAI
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 import warnings
-import pandas as pd
 from typing import List
-import numpy as np
 
 warnings.filterwarnings("ignore")
 
