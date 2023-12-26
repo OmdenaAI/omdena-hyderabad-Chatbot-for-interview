@@ -24,7 +24,7 @@ def generate_questions(
     """
 
     # Instantiate an empty pandas DataFrame.
-    question_df = pd.DataFrame(columns=["question", "interview_phase", "position", "answer"])
+    question_df = pd.DataFrame(columns=["question", "interview_phase", "position", "answer", "ratings", "feedback"])
 
     # Instantiate empty lists for questions and interview phases. These will become columns in the dataframe at the end.
     questions_list = []

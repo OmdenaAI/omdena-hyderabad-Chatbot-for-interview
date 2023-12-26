@@ -6,6 +6,7 @@ import pandas as pd
 from pathlib import Path
 from chatbot_functionalities.generate_questions import generate_questions
 from chatbot_functionalities.vectordb_operations import get_collection_from_vector_db
+from chatbot_functionalities.llms import get_ratings_for_answers, get_feedback_for_answers
 
 # enable logging
 logging.basicConfig(level=logging.INFO)
@@ -141,16 +142,17 @@ def capture_candidate_response():
             # Add answer to question's dataframe
             if st.session_state.p01_current_question_index > -1:
                 # ignoring the summary input
-                answer_row = st.session_state.p01_questions_df.iloc[st.session_state.p01_current_question_index]
-                question = answer_row['question']
-                interview_phase = answer_row['interview_phase']
-                position = answer_row['position']
-                st.session_state.p01_questions_df.iloc[st.session_state.p01_current_question_index] = [
-                    question,
-                    interview_phase,
-                    position,
-                    candidate_response_text
-                ]
+                # answer_row = st.session_state.p01_questions_df.iloc[st.session_state.p01_current_question_index]
+                # question = answer_row['question']
+                # interview_phase = answer_row['interview_phase']
+                # position = answer_row['position']
+                # st.session_state.p01_questions_df.iloc[st.session_state.p01_current_question_index] = [
+                #     question,
+                #     interview_phase,
+                #     position,
+                #     candidate_response_text
+                # ]
+                st.session_state.p01_questions_df.loc[st.session_state.p01_current_question_index, 'answer'] = candidate_response_text
                 # print(st.session_state)
 
             # change current question to the next available question
@@ -300,6 +302,11 @@ def run_web_app():
                     f"<h4 style='color: orange;'>{p01_interview_evaluation_title}</h4>",
                     unsafe_allow_html=True,
                 )
+                
+                if st.session_state.p01_start_mock_interview_disabled is False:
+                    get_ratings_for_answers(st.session_state.p01_questions_df)
+                    get_feedback_for_answers(st.session_state.p01_questions_df)
+                
                 if 'p01_questions_df' in st.session_state:
                     st.dataframe(st.session_state.p01_questions_df)
 
