@@ -1,7 +1,7 @@
 # dependencies
 import logging
 import streamlit as st
-import speech_recognition as sr
+from streamlit_mic_recorder import speech_to_text
 from pathlib import Path
 from chatbot_functionalities.generate_questions import generate_questions
 from chatbot_functionalities.vectordb_operations import get_collection_from_vector_db
@@ -94,82 +94,59 @@ def start_mock_interview():
         st.session_state.p01_candidate_profile_question[:]
     )
 
-
-def capture_candidate_response():
-    # reset error message
+def speech_recognition_callback():
+    if st.session_state.my_stt_output is None:
+        st.session_state.p01_error_message = "Please record your reponse again."
+        return
+    
     st.session_state.p01_error_message = None
+        
+    st.session_state.p01_last_candidate_response = st.session_state.my_stt_output
 
-    # initialize speech recognizer component
-    recorder = sr.Recognizer()
+    # if code reaches this point, then a response was successfully captured and transcribed
+    # append current question and the utterance from the candidate to interview history
+    st.session_state.p01_interview_history.append(
+        dict(role="assistant", content=st.session_state.p01_current_question)
+    )
+    st.session_state.p01_interview_history.append(
+        dict(role="user", content=st.session_state.my_stt_output)
+    )
 
-    # set pause_threshold - "gap in speech" that is used to detect end of utterance
-    recorder.pause_threshold = 3
+    # generate questions if not already done
+    # this is done here instead of 'Start Mock Interview' button because we
+    # CV summarization component is not ready and we need to ask the candidate
+    # to give a profile summary as part of first question
+    if not st.session_state.p01_questions_generated:
+        with st.spinner("Preparing questions for your mock interview"):
+            load_interview_questions()
+    
+    # Add answer to question's dataframe
+    if st.session_state.p01_current_question_index > -1:
+        # ignoring the summary input
+        st.session_state.p01_questions_df.loc[st.session_state.p01_current_question_index, 'answer'] = st.session_state.my_stt_output
 
-    with sr.Microphone() as audio_source:
-        try:
-            # app will wait and record the audio from microphone
-            with st.spinner("Recording in progress"):
-                candidate_response_audio = recorder.listen(
-                    audio_source,
-                    timeout=3,
-                )
-
-            # convert speech to text
-            with st.spinner("Transcribing your answer"):
-                candidate_response_text = recorder.recognize_google(
-                    candidate_response_audio
-                )
-
-            # store candidate's latest response in the session for debugging purpose
-            st.session_state.p01_last_candidate_response = candidate_response_text
-
-            # if code reaches this point, then a response was successfully captured and transcribed
-            # append current question and the utterance from the candidate to interview history
-            st.session_state.p01_interview_history.append(
-                dict(role="assistant", content=st.session_state.p01_current_question)
-            )
-            st.session_state.p01_interview_history.append(
-                dict(role="user", content=candidate_response_text)
-            )
-
-            # generate questions if not already done
-            # this is done here instead of 'Start Mock Interview' button because we
-            # CV summarization component is not ready and we need to ask the candidate
-            # to give a profile summary as part of first question
-            if not st.session_state.p01_questions_generated:
-                with st.spinner("Preparing questions for your mock interview"):
-                    load_interview_questions()
-            
-            # Add answer to question's dataframe
-            if st.session_state.p01_current_question_index > -1:
-                # ignoring the summary input
-                st.session_state.p01_questions_df.loc[st.session_state.p01_current_question_index, 'answer'] = candidate_response_text
-
-            # change current question to the next available question
-            # check if there are any more question(s) to be asked
-            if (
+    # change current question to the next available question
+    # check if there are any more question(s) to be asked
+    if (
+        st.session_state.p01_current_question_index
+        < st.session_state.p01_questions_count - 1
+    ):
+        st.session_state.p01_current_question_index += 1
+        st.session_state.p01_current_question = (
+            st.session_state.p01_questions_df.iloc[
                 st.session_state.p01_current_question_index
-                < st.session_state.p01_questions_count - 1
-            ):
-                st.session_state.p01_current_question_index += 1
-                st.session_state.p01_current_question = (
-                    st.session_state.p01_questions_df.iloc[
-                        st.session_state.p01_current_question_index
-                    ].question
-                )
-            # no more questions to be asked
-            else:
-                st.session_state.p01_current_question = "Your mock interview is over"
-                st.session_state.p01_record_answer_disabled = True
-                st.session_state.p01_start_mock_interview_disabled = False
-                st.session_state.p01_mock_interview_concluded = True
-
-        except sr.WaitTimeoutError:
-            st.session_state.p01_error_message = "Please record your reponse again by clicking on 'Record Answer' button."
-        except sr.UnknownValueError:
-            st.session_state.p01_error_message = "Kindly record your reponse again by clicking on 'Record Answer' button."
-        except sr.RequestError as error:
-            st.session_state.p01_error_message = f"Oops. Something went wrong. {error}"
+            ].question
+        )
+    # no more questions to be asked
+    else:
+        st.session_state.p01_current_question = "Your mock interview is over"
+        st.session_state.p01_record_answer_disabled = True
+        st.session_state.p01_start_mock_interview_disabled = False
+        st.session_state.p01_mock_interview_concluded = True
+    
+    # Since the update is async, the question will not update.
+    # hence forced rerun required.
+    st.experimental_rerun()
 
 def get_feedback():
     evaluate_answers(st.session_state.p01_questions_df)
@@ -257,24 +234,18 @@ def run_web_app():
                     st.markdown(st.session_state.p01_current_question)
 
             # button to start recording
-            with st.container():
-                st.button(
-                    label="Record Answer",
-                    type="primary",
-                    on_click=capture_candidate_response,
-                    disabled=st.session_state.p01_record_answer_disabled,
-                    key="p01_record_answer",
-                )
+            if 'p01_start_mock_interview_disabled' in st.session_state and st.session_state.p01_start_mock_interview_disabled is True:
+                with st.spinner():
+                    speech_to_text(
+                        key='my_stt', 
+                        callback=speech_recognition_callback
+                        )
 
             # error message section
             if "p01_error_message" in st.session_state:
                 if st.session_state.p01_error_message is not None:
                     with st.container():
                         st.error(st.session_state.p01_error_message)
-
-            # recording related instructions
-            with st.container():
-                st.info(st.session_state.p01_recording_instructions)
 
         # render interview history in tab 2
         with tab2:

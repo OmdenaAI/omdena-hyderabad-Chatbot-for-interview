@@ -157,6 +157,7 @@ dependencies:
       - sqlalchemy==2.0.23
       - starlette==0.27.0
       - streamlit==1.29.0
+      - streamlit-mic-recorder==0.0.4
       - sympy==1.12
       - tenacity==8.2.3
       - threadpoolctl==3.2.0
