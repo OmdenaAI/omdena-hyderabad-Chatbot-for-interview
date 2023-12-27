@@ -43,7 +43,7 @@ def llm_inference(
 
     """
     # Please ensure you have a .env file available with 'HUGGINGFACEHUB_API_TOKEN' and 'OPENAI_API_KEY' values.
-    #load_dotenv(find_dotenv())
+    load_dotenv(find_dotenv())
 
     prompt = PromptTemplate(
         template=prompt_template, input_variables=input_variables_list
@@ -74,7 +74,7 @@ def llm_inference(
         # https://python.langchain.com/docs/integrations/llms/huggingface_hub
         llm = HuggingFaceHub(
             repo_id=hf_repo_id,
-            model_kwargs={"temperature": temperature, "max_length": max_length}, huggingfacehub_api_token = "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"
+            model_kwargs={"temperature": temperature, "max_length": max_length},
         )
         llm_chain = LLMChain(prompt=prompt, llm=llm)
 
