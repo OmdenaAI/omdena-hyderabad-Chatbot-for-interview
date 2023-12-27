@@ -5,7 +5,7 @@ from streamlit_mic_recorder import speech_to_text
 from pathlib import Path
 from chatbot_functionalities.generate_questions import generate_questions
 from chatbot_functionalities.vectordb_operations import get_collection_from_vector_db
-from chatbot_functionalities.evaluate_answers import get_ratings_for_answers, get_feedback_for_answers, get_overall_feedback
+from chatbot_functionalities.evaluate_answers import evaluate_answers, get_overall_feedback
 
 # enable logging
 logging.basicConfig(level=logging.INFO)
@@ -149,8 +149,9 @@ def speech_recognition_callback():
     st.experimental_rerun()
 
 def get_feedback():
-    get_ratings_for_answers(st.session_state.p01_questions_df)
-    get_feedback_for_answers(st.session_state.p01_questions_df)
+    evaluate_answers(st.session_state.p01_questions_df)
+    # get_ratings_for_answers(st.session_state.p01_questions_df)
+    # get_feedback_for_answers(st.session_state.p01_questions_df)
     st.session_state.overall_feedback = get_overall_feedback()
 
 # function for rendering the main web application
