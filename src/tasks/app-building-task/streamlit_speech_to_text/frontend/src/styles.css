@@ -1,0 +1,10 @@
+.start {
+  font-family: var(--font);
+  border: 1px solid var(--secondary-background-color);
+  padding: 8px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  border-radius: 8px;
+}
