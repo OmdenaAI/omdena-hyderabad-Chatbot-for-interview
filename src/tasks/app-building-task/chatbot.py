@@ -5,7 +5,7 @@ from streamlit_mic_recorder import speech_to_text
 from pathlib import Path
 from chatbot_functionalities.generate_questions import generate_questions
 from chatbot_functionalities.vectordb_operations import get_collection_from_vector_db
-from chatbot_functionalities.evaluate_answers import evaluate_answers, get_overall_feedback
+from chatbot_functionalities.evaluate_answers import evaluate_all_answers, get_overall_feedback
 
 # enable logging
 logging.basicConfig(level=logging.INFO)
@@ -149,7 +149,10 @@ def speech_recognition_callback():
     st.experimental_rerun()
 
 def get_feedback():
-    evaluate_answers(st.session_state.p01_questions_df)
+    evaluate_all_answers(
+        interview_history=st.session_state.p01_questions_df, 
+        questions_collection=st.session_state.p01_questions_collection,
+        )
     # get_ratings_for_answers(st.session_state.p01_questions_df)
     # get_feedback_for_answers(st.session_state.p01_questions_df)
     st.session_state.overall_feedback = get_overall_feedback()
@@ -281,8 +284,37 @@ def run_web_app():
                     
                     if 'overall_feedback' in st.session_state and st.session_state.overall_feedback is not None:
                         if 'p01_questions_df' in st.session_state:
+                            st.markdown(
+                                f"<h6 style='color: orange;'>Question Level Feedback</h6>",
+                                unsafe_allow_html=True, 
+                                )
                             with st.container():
-                                st.dataframe(st.session_state.p01_questions_df)
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.markdown(
+                                        f"<h6 style='color: red;'>Question</h6>",
+                                        unsafe_allow_html=True, 
+                                        )
+                                with col2:
+                                    st.markdown(
+                                        f"<h6 style='color: red;'>Answer</h6>",
+                                        unsafe_allow_html=True, 
+                                        )
+                                with col3:
+                                    st.markdown(
+                                        f"<h6 style='color: red;'>Rating & Feedback</h6>",
+                                        unsafe_allow_html=True, 
+                                        )
+
+                            for row in st.session_state.p01_questions_df.itertuples():
+                                with st.container():
+                                    col1, col2, col3 = st.columns(3)
+                                    with col1:
+                                        st.markdown(row.question)
+                                    with col2:
+                                        st.markdown(row.answer)
+                                    with col3:
+                                        st.markdown(row.feedback)
                                 
                             with st.container():
                                 st.markdown(
@@ -290,7 +322,7 @@ def run_web_app():
                                     unsafe_allow_html=True,
                                 )
                             with st.chat_message("assistant"):
-                                st.markdown(st.session_state.overall_feedback)
+                                st.markdown("This functionality will be available in next release.")
 
 
 # call the function to render the main web application
