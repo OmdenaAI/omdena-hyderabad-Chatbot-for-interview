@@ -19,6 +19,7 @@ def llm_inference(
     inference_type : str = "",
     temperature: float = 0.1,
     max_length: int = 64,
+    interview_phase: str = ""
 ) -> str:
     """Call HuggingFace/OpenAI model for inference
 
@@ -71,7 +72,8 @@ def llm_inference(
             return llm_chain.predict(
                 position=input_variables_list[0],
                 candidate_profile=input_variables_list[1],
-                num_ques_to_gen=input_variables_list[2],
+                n_results=input_variables_list[2],
+                interview_phase=interview_phase
         )
 
     elif model_type == "huggingface":
@@ -92,7 +94,8 @@ def llm_inference(
             return llm_chain.predict(
                 position=input_variables_list[0],
                 candidate_profile=input_variables_list[1],
-                num_ques_to_gen=input_variables_list[2],
+                n_results=input_variables_list[2],
+                interview_phase=interview_phase
         )
 
     else:

@@ -1,5 +1,6 @@
 # dependencies
 import logging
+import pandas
 import streamlit as st
 from streamlit_mic_recorder import speech_to_text
 from pathlib import Path
@@ -55,15 +56,17 @@ def initialize_app():
     # the web app invokes this function only when this variable is not set
     st.session_state.p01_init_complete = True
 
-
 def load_interview_questions():
     """Helper function to call question generation module"""
     if not st.session_state.p01_questions_generated:
+        question_order_df = pandas.read_csv((Path.cwd() / "src" / "data" / "processed" / "question-order.csv").__str__())
+        
         # use candidate provided profile summary and generate subsequent questions to be asked
         st.session_state.p01_questions_df = generate_questions(
             position=st.session_state.p01_job_position,
             candidate_profile=st.session_state.p01_interview_history[1]["content"],
             question_collection=st.session_state.p01_questions_collection,
+            question_order_df=question_order_df
         )
 
         # set questions count
