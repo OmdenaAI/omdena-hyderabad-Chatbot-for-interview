@@ -1,0 +1,7 @@
+Job Position, Interview Phase, Sequence of Interview Phase, Number of questions for this interview phase, Number of LLM Generation questions, Preset Question 1, Preset Question 2
+
+Nurse, Introduction, 1, 2, 1, Introduction Q1, Introduction Q2
+Nurse, Behavioral, 2, 2, 1, Behavioral Q1, Behavioral Q2
+Nurse, Communication, 3, 2, 1, Communication Q1, Communication Q2
+Nurse, Technical, 4, 2, 1, Technical Q1, Technical Q2
+Nurse, Conclusion, 5, 2, 1, Conclusion Q1, Conclusion Q2
